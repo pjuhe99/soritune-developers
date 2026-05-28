@@ -1,0 +1,9 @@
+:root { --ink:#37352f; --primary:#7C53D8; --hairline:#e6e4df; --canvas:#ffffff; --error:#ef4444; }
+body { font-family: -apple-system, "Pretendard", system-ui, sans-serif; color: var(--ink); margin: 0; background: var(--canvas); }
+.login-shell { max-width: 360px; margin: 80px auto; padding: 0 16px; }
+.login-shell h1 { font-size: 24px; margin-bottom: 4px; }
+.login-shell form { display: grid; gap: 12px; margin-top: 24px; }
+.login-shell label { display: grid; gap: 4px; font-size: 14px; }
+.login-shell input { padding: 10px; border: 1px solid var(--hairline); border-radius: 8px; font-size: 14px; }
+.login-shell button { background: var(--primary); color: #fff; padding: 10px; border: 0; border-radius: 8px; font-weight: 500; cursor: pointer; }
+.error { background: #fee2e2; color: var(--error); padding: 8px 12px; border-radius: 8px; font-size: 13px; }
