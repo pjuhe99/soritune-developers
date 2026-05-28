@@ -7,7 +7,9 @@
 ## 개발
 ```
 composer install
-./scripts/run_migrations.sh
+./scripts/run_migrations.sh   # Task 2에서 추가
 vendor/bin/phpunit
-./tests/run.sh
+./tests/run.sh                # Task 17에서 추가
 ```
+
+> `scripts/run_migrations.sh` 와 `tests/run.sh` 는 아직 존재하지 않습니다. 각각 해당 태스크에서 생성됩니다.
