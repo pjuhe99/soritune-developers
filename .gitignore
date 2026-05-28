@@ -1,0 +1,14 @@
+vendor/
+.env
+.db_credentials
+jobs/pending/*
+jobs/running/*
+jobs/done/*
+jobs/logs/*
+!jobs/pending/.gitkeep
+!jobs/running/.gitkeep
+!jobs/done/.gitkeep
+!jobs/logs/.gitkeep
+.phpunit.result.cache
+*.log
+logs/
