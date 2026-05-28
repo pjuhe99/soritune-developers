@@ -1,0 +1,20 @@
+CREATE TABLE IF NOT EXISTS jobs (
+  id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  type ENUM('project_init','site_create','dev_deploy','prod_deploy','user_repo_grant') NOT NULL,
+  status ENUM('pending','running','success','failed','canceled') NOT NULL DEFAULT 'pending',
+  project_id INT UNSIGNED NULL DEFAULT NULL,
+  task_id INT UNSIGNED NULL DEFAULT NULL,
+  user_id INT UNSIGNED NOT NULL,
+  payload JSON NOT NULL,
+  result JSON NULL,
+  error_message TEXT NULL,
+  log_path VARCHAR(255) NULL,
+  attempts INT NOT NULL DEFAULT 0,
+  enqueued_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at TIMESTAMP NULL DEFAULT NULL,
+  finished_at TIMESTAMP NULL DEFAULT NULL,
+  INDEX idx_status_type (status, type),
+  INDEX idx_task (task_id),
+  INDEX idx_project (project_id),
+  CONSTRAINT fk_jobs_user FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
