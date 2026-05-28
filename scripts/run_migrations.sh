@@ -18,10 +18,10 @@ mysql_cmd <<'SQL'
 CREATE TABLE IF NOT EXISTS schema_migrations (
   filename VARCHAR(120) NOT NULL PRIMARY KEY,
   applied_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 SQL
 
-applied=$(mysql_cmd -N -B -e "SELECT filename FROM schema_migrations" | sort)
+applied=$(mysql_cmd -N -B -e "SELECT filename FROM schema_migrations")
 
 for f in migrations/*.sql; do
   base=$(basename "$f")

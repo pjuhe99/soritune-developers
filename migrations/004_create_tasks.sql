@@ -9,7 +9,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     'review_requested','changes_requested','approved',
     'prod_deploying','prod_done','failed','on_hold'
   ) NOT NULL DEFAULT 'drafting',
-  current_job_id INT UNSIGNED NULL DEFAULT NULL,
+  current_job_id INT UNSIGNED NULL DEFAULT NULL,    -- no FK: circular ref with jobs (jobs.task_id → tasks)
   last_dev_commit VARCHAR(40) NULL DEFAULT NULL,
   last_prod_commit VARCHAR(40) NULL DEFAULT NULL,
   last_dev_deploy_at TIMESTAMP NULL DEFAULT NULL,

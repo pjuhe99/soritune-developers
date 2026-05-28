@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS projects (
   last_synced_at TIMESTAMP NULL DEFAULT NULL,
   last_prod_commit VARCHAR(40) NULL DEFAULT NULL,
   last_prod_deployed_at TIMESTAMP NULL DEFAULT NULL,
-  init_job_id INT UNSIGNED NULL DEFAULT NULL,
+  init_job_id INT UNSIGNED NULL DEFAULT NULL,        -- no FK: circular ref with jobs (jobs.project_id → projects)
   created_by INT UNSIGNED NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

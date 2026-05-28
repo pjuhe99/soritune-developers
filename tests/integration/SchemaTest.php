@@ -17,11 +17,11 @@ final class SchemaTest extends TestCase
         }
     }
 
-    public function testUsersStatusFields(): void
+    public function testUsersColumns(): void
     {
         $db = getDB();
         $cols = $db->query("SHOW COLUMNS FROM users")->fetchAll(PDO::FETCH_COLUMN);
-        foreach (['id','username','password_hash','display_name','role','github_username','active','failed_attempts','locked_until','must_change_password','last_login_at'] as $c) {
+        foreach (['id','username','password_hash','display_name','role','github_username','active','failed_attempts','locked_until','must_change_password','last_login_at','created_at','updated_at'] as $c) {
             $this->assertContains($c, $cols, "users.$c missing");
         }
     }
@@ -35,6 +35,33 @@ final class SchemaTest extends TestCase
         $this->assertStringContainsString("'dev_deploy'", $col['Type']);
         $this->assertStringContainsString("'prod_deploy'", $col['Type']);
         $this->assertStringContainsString("'user_repo_grant'", $col['Type']);
+    }
+
+    public function testJobsStatusEnum(): void
+    {
+        $db = getDB();
+        $col = $db->query("SHOW COLUMNS FROM jobs LIKE 'status'")->fetch(PDO::FETCH_ASSOC);
+        foreach (['pending','running','success','failed','canceled'] as $s) {
+            $this->assertStringContainsString("'$s'", $col['Type']);
+        }
+    }
+
+    public function testProjectsCardTintEnum(): void
+    {
+        $db = getDB();
+        $col = $db->query("SHOW COLUMNS FROM projects LIKE 'card_tint'")->fetch(PDO::FETCH_ASSOC);
+        foreach (['peach','rose','mint','lavender','sky','yellow'] as $t) {
+            $this->assertStringContainsString("'$t'", $col['Type']);
+        }
+    }
+
+    public function testProjectsStatusEnum(): void
+    {
+        $db = getDB();
+        $col = $db->query("SHOW COLUMNS FROM projects LIKE 'status'")->fetch(PDO::FETCH_ASSOC);
+        foreach (['provisioning','active','archived'] as $s) {
+            $this->assertStringContainsString("'$s'", $col['Type']);
+        }
     }
 
     public function testTasksStatusEnum11Values(): void

@@ -2,8 +2,8 @@ CREATE TABLE IF NOT EXISTS jobs (
   id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   type ENUM('project_init','site_create','dev_deploy','prod_deploy','user_repo_grant') NOT NULL,
   status ENUM('pending','running','success','failed','canceled') NOT NULL DEFAULT 'pending',
-  project_id INT UNSIGNED NULL DEFAULT NULL,
-  task_id INT UNSIGNED NULL DEFAULT NULL,
+  project_id INT UNSIGNED NULL DEFAULT NULL,    -- no FK: circular ref (projects.init_job_id → jobs)
+  task_id    INT UNSIGNED NULL DEFAULT NULL,    -- no FK: circular ref (tasks.current_job_id → jobs)
   user_id INT UNSIGNED NOT NULL,
   payload JSON NOT NULL,
   result JSON NULL,
