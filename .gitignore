@@ -1,4 +1,5 @@
 vendor/
+composer.lock
 .env
 .db_credentials
 jobs/pending/*
@@ -11,4 +12,4 @@ jobs/logs/*
 !jobs/logs/.gitkeep
 .phpunit.result.cache
 *.log
-logs/
+/logs/
