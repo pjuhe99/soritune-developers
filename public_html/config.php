@@ -10,7 +10,7 @@ function loadDbCredentials(): array {
     }
     $out = [];
     foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-        if ($line[0] === '#') continue;
+        if ($line[0] === '#' || trim($line) === '') continue;
         [$k, $v] = array_pad(explode('=', $line, 2), 2, '');
         $out[trim($k)] = trim($v);
     }
@@ -42,7 +42,7 @@ function loadEnv(): array {
     $env = [];
     if (is_readable($path)) {
         foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
-            if ($line[0] === '#') continue;
+            if ($line[0] === '#' || trim($line) === '') continue;
             [$k, $v] = array_pad(explode('=', $line, 2), 2, '');
             $env[trim($k)] = trim($v);
         }
@@ -61,16 +61,18 @@ function envOrDie(string $key): string {
 function jsonResponse(array $data, int $status = 200): void {
     http_response_code($status);
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode($data, JSON_UNESCAPED_UNICODE);
+    echo json_encode($data, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     if (($_ENV['APP_ENV'] ?? getenv('APP_ENV')) !== 'test') {
         exit;
     }
 }
 
+// NOTE: $payload must not contain keys 'ok' or 'message' — they would clobber the envelope.
 function jsonSuccess(array $payload = [], string $message = ''): void {
     jsonResponse(array_merge(['ok' => true, 'message' => $message], $payload));
 }
 
+// NOTE: $extra must not contain keys 'ok' or 'message' — they would clobber the envelope.
 function jsonError(string $message, int $status = 400, array $extra = []): void {
     jsonResponse(array_merge(['ok' => false, 'message' => $message], $extra), $status);
 }
