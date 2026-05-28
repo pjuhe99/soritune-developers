@@ -19,13 +19,15 @@ if [ "${#pw}" -lt 12 ]; then
     exit 1
 fi
 
-hash=$(php -r 'echo password_hash($argv[1], PASSWORD_BCRYPT, ["cost" => 10]);' "$pw")
-
-set -a; . ./.db_credentials; set +a
-sed -e "s|__USERNAME__|$username|g" \
-    -e "s|__HASH__|$hash|g" \
-    -e "s|__DISPLAY__|$display|g" \
-    migrations/007_seed_admin.sql.template \
-  | mysql -h "${DB_HOST:-localhost}" -u "$DB_USER" -p"$DB_PASS" "$DB_NAME"
+php -r '
+require dirname(__DIR__) . "/public_html/config.php";
+$pw = $argv[3];
+$hash = password_hash($pw, PASSWORD_BCRYPT, ["cost" => 10]);
+$db = getDB();
+$st = $db->prepare("INSERT INTO users (username, password_hash, display_name, role, must_change_password)
+    VALUES (?, ?, ?, \"admin\", 1)
+    ON DUPLICATE KEY UPDATE password_hash=VALUES(password_hash), must_change_password=1");
+$st->execute([$argv[1], $hash, $argv[2]]);
+' "$username" "$display" "$pw"
 
 echo "Admin '$username' seeded (must change password on first login)."

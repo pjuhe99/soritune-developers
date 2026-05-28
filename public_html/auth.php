@@ -52,6 +52,9 @@ function logoutUser(): void {
     startSessionOnce();
     $_SESSION = [];
     session_destroy();
+    if (!headers_sent()) {
+        setcookie(session_name(), '', time() - 3600, '/', '', !empty($_SERVER['HTTPS']), true);
+    }
 }
 
 function requireAuth(): array {
@@ -75,9 +78,9 @@ function requireAdmin(): array {
     return $u;
 }
 
-function requireEmployee(): array {
+function requireAuthenticated(): array {
     $u = requireAuth();
-    // Both admin and employee allowed on /api/user, gate is "logged in".
+    // Allow any logged-in user (admin or employee). Gate is "logged in".
     return $u;
 }
 
