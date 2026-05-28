@@ -1,0 +1,7 @@
+-- Rendered to seed_admin.sql by scripts/seed_admin.sh.
+-- Placeholders: __USERNAME__, __HASH__, __DISPLAY__.
+INSERT INTO users (username, password_hash, display_name, role, must_change_password)
+VALUES ('__USERNAME__', '__HASH__', '__DISPLAY__', 'admin', 1)
+ON DUPLICATE KEY UPDATE
+  password_hash = VALUES(password_hash),
+  must_change_password = 1;
