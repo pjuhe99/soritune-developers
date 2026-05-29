@@ -36,6 +36,7 @@ switch ($op) {
     }
     case 'set_github_username': {
         $gh = trim((string)($_POST['github_username'] ?? '')) ?: null;
+        if ($gh !== null && !\Soritune\Developers\Validation::isValidGithubLogin($gh)) { jsonError('invalid github_username'); return; }
         $db = getDB();
         $db->prepare("UPDATE users SET github_username = ? WHERE id = ?")->execute([$gh, currentUser()['id']]);
         $_SESSION['user']['github_username'] = $gh;

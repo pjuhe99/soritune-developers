@@ -30,6 +30,7 @@ switch ($op) {
         if ($name === '') { jsonError('display_name required'); return; }
         if (!in_array($role, ['admin','employee'], true)) { jsonError('role must be admin|employee'); return; }
         if (!Validation::isStrongPassword($pw)) { jsonError('temp_password must be 12+ chars with letter+digit'); return; }
+        if ($gh !== '' && !\Soritune\Developers\Validation::isValidGithubLogin($gh)) { jsonError('invalid github_username'); return; }
 
         try {
             $st = $db->prepare(
@@ -77,6 +78,7 @@ switch ($op) {
         $uid = (int)($_POST['user_id'] ?? 0);
         if ($uid <= 0) { jsonError('user_id required'); return; }
         $gh = trim((string)($_POST['github_username'] ?? '')) ?: null;
+        if ($gh !== null && !\Soritune\Developers\Validation::isValidGithubLogin($gh)) { jsonError('invalid github_username'); return; }
         $db->prepare("UPDATE users SET github_username = ? WHERE id = ?")->execute([$gh, $uid]);
         Audit::writeFromRequest(currentUser()['id'], 'user.set_github_username', 'user', $uid, ['github_username' => $gh]);
         jsonSuccess([], 'updated');

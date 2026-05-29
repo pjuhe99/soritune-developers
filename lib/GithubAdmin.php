@@ -18,11 +18,20 @@ final class GithubAdmin
         return $this->runner->run("$env gh api $args 2>&1");
     }
 
+    /** Defense-in-depth: $fullName is interpolated raw into shell commands.
+     *  Callers pass GitHub-sourced or validated values, but assert the shape here too. */
+    private function assertSafeFullName(string $fullName): void
+    {
+        if (!preg_match('#\A[A-Za-z0-9][A-Za-z0-9._-]{0,38}/[A-Za-z0-9][A-Za-z0-9._-]{0,99}\z#', $fullName)) {
+            throw new \InvalidArgumentException("GithubAdmin: unsafe fullName: $fullName");
+        }
+    }
+
     public function createRepo(string $slug, string $description): array
     {
         $slug = trim($slug);
         $endpoint = $this->accountType === 'org'
-            ? '/orgs/' . escapeshellarg($this->account) . '/repos'
+            ? '/orgs/' . rawurlencode($this->account) . '/repos'
             : '/user/repos';
         $r = $this->gh("-X POST $endpoint "
             . '-f name=' . escapeshellarg($slug) . ' '
@@ -48,18 +57,23 @@ final class GithubAdmin
 
     public function createDevBranch(string $fullName): array
     {
+        $this->assertSafeFullName($fullName);
         $sha = $this->gh("-X GET /repos/$fullName/git/ref/heads/main --jq .object.sha");
         if ($sha['code'] !== 0) return ['ok'=>false,'error'=>'main ref not found'];
-        $main = trim($sha['out']);
+        if (!preg_match('/\b[0-9a-f]{7,40}\b/', $sha['out'], $m)) {
+            return ['ok'=>false,'error'=>'could not parse main sha'];
+        }
+        $main = $m[0];
         $r = $this->gh("-X POST /repos/$fullName/git/refs -f ref=refs/heads/dev -f sha=" . escapeshellarg($main));
         if ($r['code'] === 0) return ['ok'=>true,'existed'=>false];
-        if (str_contains($r['out'], 'already exists') || str_contains($r['out'], '422')) return ['ok'=>true,'existed'=>true];
+        if (str_contains($r['out'], 'Reference already exists') || str_contains($r['out'], 'already exists')) return ['ok'=>true,'existed'=>true];
         return ['ok'=>false,'error'=>'createDevBranch failed: ' . trim($r['out'])];
     }
 
     /** 2 rulesets: main protected + dev protected. NO ref-name restriction (allows feature branches). */
     public function addRulesets(string $fullName): array
     {
+        $this->assertSafeFullName($fullName);
         $ids = [];
         foreach (['main','dev'] as $branch) {
             $rules = $branch === 'main'
@@ -87,10 +101,11 @@ final class GithubAdmin
 
     public function addCollaborators(string $fullName, array $usernames, string $role = 'push'): array
     {
+        $this->assertSafeFullName($fullName);
         $added = []; $skipped = [];
         foreach ($usernames as $u) {
             if (trim((string)$u) === '') { $skipped[] = $u; continue; }
-            $r = $this->gh("-X PUT /repos/$fullName/collaborators/" . escapeshellarg($u)
+            $r = $this->gh("-X PUT /repos/$fullName/collaborators/" . rawurlencode($u)
                 . ' -f permission=' . escapeshellarg($role));
             if ($r['code'] === 0) $added[] = $u; else $skipped[] = $u;
         }

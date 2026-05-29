@@ -27,6 +27,22 @@ final class ValidationTest extends TestCase
         $this->assertFalse(Validation::isValidSlug("camp\n"));       // trailing newline bypass
     }
 
+    public function testGithubLogin(): void
+    {
+        // valid
+        $this->assertTrue(Validation::isValidGithubLogin('alice'));
+        $this->assertTrue(Validation::isValidGithubLogin('a-b-c'));
+        $this->assertTrue(Validation::isValidGithubLogin('Octocat99'));
+        // invalid
+        $this->assertFalse(Validation::isValidGithubLogin(''));           // empty
+        $this->assertFalse(Validation::isValidGithubLogin('-bad'));       // leading hyphen
+        $this->assertFalse(Validation::isValidGithubLogin('bad-'));       // trailing hyphen
+        $this->assertFalse(Validation::isValidGithubLogin('a/../b'));     // path traversal
+        $this->assertFalse(Validation::isValidGithubLogin('a b'));        // space
+        $this->assertFalse(Validation::isValidGithubLogin('a--b'));       // double hyphen (lookahead fails)
+        $this->assertFalse(Validation::isValidGithubLogin(str_repeat('a', 40))); // too long (>39)
+    }
+
     public function testGithubRepo(): void
     {
         $this->assertTrue(Validation::isValidGithubRepo('pjuhe99/soritune-camp'));

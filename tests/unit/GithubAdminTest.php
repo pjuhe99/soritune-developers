@@ -82,7 +82,7 @@ final class GithubAdminTest extends TestCase
     public function testCreateDevBranch(): void
     {
         $ga = $this->ga(function ($cmd) {
-            if (str_contains($cmd, 'git/ref/heads/main')) return ['code'=>0,'out'=>'abc123sha','err'=>''];
+            if (str_contains($cmd, 'git/ref/heads/main')) return ['code'=>0,'out'=>'abc123def4567890','err'=>''];
             return ['code'=>0,'out'=>json_encode(['ref'=>'refs/heads/dev']),'err'=>''];
         });
         $r = $ga->createDevBranch('acct/camp');
@@ -93,11 +93,33 @@ final class GithubAdminTest extends TestCase
     public function testCreateDevBranchExisted(): void
     {
         $ga = $this->ga(function ($cmd) {
-            if (str_contains($cmd, 'git/ref/heads/main')) return ['code'=>0,'out'=>'abc123sha','err'=>''];
+            if (str_contains($cmd, 'git/ref/heads/main')) return ['code'=>0,'out'=>'abc123def4567890','err'=>''];
             return ['code'=>1,'out'=>'HTTP 422 Reference already exists','err'=>''];
         });
         $r = $ga->createDevBranch('acct/camp');
         $this->assertTrue($r['ok']);
         $this->assertTrue($r['existed']);
+    }
+
+    public function testAddCollaboratorsEncodesUsername(): void
+    {
+        $captured = [];
+        $ga = $this->ga(function ($cmd) use (&$captured) {
+            $captured[] = $cmd;
+            return ['code'=>0,'out'=>'','err'=>''];
+        });
+        $ga->addCollaborators('acct/camp', ['weird/../x']);
+        $this->assertCount(1, $captured);
+        $cmd = $captured[0];
+        // rawurlencode encodes / and . → percent-encoded form
+        $this->assertStringContainsString('weird%2F..%2Fx', $cmd);
+        $this->assertStringNotContainsString('/collaborators/weird/../x', $cmd);
+    }
+
+    public function testRejectsUnsafeFullName(): void
+    {
+        $ga = $this->ga(fn($cmd) => ['code'=>0,'out'=>'','err'=>'']);
+        $this->expectException(\InvalidArgumentException::class);
+        $ga->addRulesets('acct/camp; rm -rf /');
     }
 }

@@ -15,6 +15,12 @@ final class Validation
         return (bool)preg_match('/^[a-z][a-z0-9-]{0,37}[a-z0-9]\z/', $s);
     }
 
+    /** GitHub login: 1-39 chars, alphanumeric or single hyphens, no leading/trailing hyphen. */
+    public static function isValidGithubLogin(string $s): bool
+    {
+        return (bool)preg_match('/\A[A-Za-z0-9](?:[A-Za-z0-9]|-(?=[A-Za-z0-9])){0,38}\z/', $s);
+    }
+
     public static function isValidGithubRepo(string $s): bool
     {
         // owner: GitHub-style (alphanumeric + hyphens, no dots/underscores — prevents
