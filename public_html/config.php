@@ -3,6 +3,12 @@ declare(strict_types=1);
 
 const SITE_ROOT = __DIR__ . '/..';
 
+// Composer autoloader for lib/ classes (Audit, Validation, JobQueue).
+// Web entrypoints include this via auth.php; without it, any handler that uses a
+// Soritune\Developers\ class fatals with "Class not found" once past the auth gate.
+// (tests/bootstrap.php loads its own copy; require_once makes this a no-op there.)
+require_once SITE_ROOT . '/vendor/autoload.php';
+
 function loadDbCredentials(): array {
     $path = SITE_ROOT . '/.db_credentials';
     if (!is_readable($path)) {
