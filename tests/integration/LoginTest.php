@@ -19,7 +19,7 @@ final class LoginTest extends TestCase
         $this->password = 'TestPass1234567';
         $hash = password_hash($this->password, PASSWORD_BCRYPT, ['cost' => 10]);
         $this->db->prepare(
-            "INSERT INTO users (username, password_hash, display_name, role, must_change_password) VALUES (?, ?, 'Login Test', 'admin', 0)"
+            "INSERT INTO users (username, password_hash, display_name, role, must_change_password, active) VALUES (?, ?, 'Login Test', 'admin', 0, 1)"
         )->execute([$this->username, $hash]);
     }
 

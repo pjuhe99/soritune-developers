@@ -36,6 +36,7 @@ function attemptLogin(string $username, string $password): array {
 
 // HTTP entry
 if (PHP_SAPI !== 'cli' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    startSessionOnce();
     requireCsrfOrAbort();
     $u = $_POST['username'] ?? '';
     $p = $_POST['password'] ?? '';
