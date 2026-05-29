@@ -10,7 +10,17 @@ $db = getDB();
 $job = $db->query("SELECT * FROM jobs WHERE id=$jobId")->fetch(PDO::FETCH_ASSOC);
 if (!$job) { fwrite(STDERR, "job not found\n"); exit(1); }
 $p = json_decode($job['payload'], true);
+if (!is_array($p) || empty($p['project_id']) || empty($p['slug'])
+    || empty($p['dev_subdomain']) || empty($p['prod_subdomain'])
+    || !isset($p['dev_bare'], $p['prod_bare'])) {
+    JobQueue::markDone($jobId, false, 'invalid project_init payload');
+    fwrite(STDERR, "invalid payload\n"); exit(1);
+}
 $env = loadEnv();
+$redact = function (string $s) use ($env): string {
+    $tok = (string)($env['GITHUB_TOKEN'] ?? '');
+    return ($tok !== '' && $s !== '') ? str_replace($tok, '***', $s) : $s;
+};
 $runner = new CliRunner();
 $result = [];
 $fail = function (string $step, string $err) use ($db, $jobId, &$result) {
@@ -53,18 +63,19 @@ $pprod= $smc->provision($p['prod_bare']); if (!$pprod['ok']) $fail('site_prod', 
 // 6. clone into public_html (temp clone then move; site_manager already put a default index.php there)
 $devN = ProjectNaming::fromSubdomain($p['dev_subdomain']);
 $prodN= ProjectNaming::fromSubdomain($p['prod_subdomain']);
-$cloneInto = function(string $codeDir, string $branch) use ($runner,$env,$full,$fail){
+$cloneInto = function(string $codeDir, string $branch) use ($runner,$env,$full,$fail,$redact){
     if (is_dir("$codeDir/.git")) return; // already cloned (idempotent)
     $tmp = sys_get_temp_dir().'/pcinit_'.bin2hex(random_bytes(5));
     $tokUrl = 'https://x-access-token:'.($env['GITHUB_TOKEN']??'').'@github.com/'.$full.'.git';
     $cmd = 'GIT_TERMINAL_PROMPT=0 git clone --branch '.escapeshellarg($branch)
          .' '.escapeshellarg($tokUrl).' '.escapeshellarg($tmp).' 2>&1';
     $c = $runner->run($cmd);
-    if ($c['code']!==0){ $runner->run('rm -rf '.escapeshellarg($tmp)); $fail('clone_'.$branch, trim($c['out'])); }
+    if ($c['code']!==0){ $runner->run('rm -rf '.escapeshellarg($tmp)); $fail('clone_'.$branch, $redact(trim($c['out']))); }
     // replace the site_manager default index.php with the repo contents (preserve nothing in public_html)
     $runner->run('rm -f '.escapeshellarg("$codeDir/index.php"));
-    $runner->run('cp -a '.escapeshellarg($tmp).'/. '.escapeshellarg($codeDir).'/ 2>&1');
+    $cp = $runner->run('cp -a '.escapeshellarg($tmp).'/. '.escapeshellarg($codeDir).'/ 2>&1');
     $runner->run('rm -rf '.escapeshellarg($tmp));
+    if ($cp['code'] !== 0) { $fail('clone_move_'.$branch, $redact(trim($cp['out']))); }
 };
 $cloneInto($devN['code_dir'],'dev');
 $cloneInto($prodN['code_dir'],'main');
