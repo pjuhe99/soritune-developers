@@ -1,0 +1,25 @@
+# Block direct access to dotfiles (.env, .db_credentials, .git, etc.)
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+# Defense in depth: never serve raw source/config files even if one lands in the docroot.
+<FilesMatch "\.(sql|md|sh|lock|json|log)$">
+  Require all denied
+</FilesMatch>
+
+# Force HTTPS (the :80 vhost shares this docroot).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>
+
+# Default document.
+DirectoryIndex index.php
+
+# Cache static assets.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/css "access plus 1 day"
+</IfModule>
