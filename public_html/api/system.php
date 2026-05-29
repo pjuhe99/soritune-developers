@@ -8,10 +8,11 @@ requireAdmin();
 
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 $handlerMap = [
-    'auth'     => __DIR__ . '/system/auth.php',
-    'users'    => __DIR__ . '/system/users.php',
-    'projects' => __DIR__ . '/system/projects.php',
-    'jobs'     => __DIR__ . '/system/jobs.php',
+    'auth'           => __DIR__ . '/system/auth.php',
+    'users'          => __DIR__ . '/system/users.php',
+    'projects'       => __DIR__ . '/system/projects.php',
+    'jobs'           => __DIR__ . '/system/jobs.php',
+    'project_status' => __DIR__ . '/system/project_status.php',
 ];
 if (!isset($handlerMap[$action])) {
     jsonError("unknown action: $action", 404);
