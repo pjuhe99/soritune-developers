@@ -851,13 +851,16 @@ final class ProjectInitApiTest extends TestCase
         $db = getDB();
         $db->beginTransaction();
         try {
+            // github_repo is NOT NULL. Store the INTENDED full_name now (<account>/<slug>
+            // if GITHUB_ACCOUNT is set, else just <slug> as a non-empty placeholder);
+            // the project_init job overwrites it with the real full_name after createRepo.
+            $acct = trim((string)(loadEnv()['GITHUB_ACCOUNT'] ?? ''));
+            $githubRepo = $acct !== '' ? "$acct/$slug" : $slug;
             $st = $db->prepare(
                 "INSERT INTO projects (slug,name,description,github_repo,dev_subdomain,prod_subdomain,dev_dir,prod_dir,dev_db_name,prod_db_name,status,created_by)
                  VALUES (?,?,?,?,?,?,?,?,?,?, 'provisioning', ?)"
             );
-            $githubRepo = ($_ENV['skip']??'') ?: ''; // placeholder; real github_repo set by job after createRepo
-            $st->execute([$slug,$name,($desc?:null),
-                ($GLOBALS['__init_repo'] ?? "{$slug}"), // github_repo filled properly by job; store slug for now
+            $st->execute([$slug,$name,($desc?:null),$githubRepo,
                 $devSub,$prodSub,$dev['code_dir'],$prod['code_dir'],$dev['db_name'],$prod['db_name'],currentUser()['id']]);
         } catch (\PDOException $e) {
             $db->rollBack();
@@ -878,7 +881,7 @@ final class ProjectInitApiTest extends TestCase
         return;
     }
 ```
-**NOTE (implementer):** the `github_repo` column is NOT NULL. Store the intended `<account>/<slug>` if `GITHUB_ACCOUNT` is set in env, else store `slug` as a non-empty placeholder; the job overwrites it with the real `full_name` after createRepo. Replace the messy `$GLOBALS` placeholder above with: read `loadEnv()['GITHUB_ACCOUNT']`, compute `$acct ? "$acct/$slug" : $slug`. Keep `Validation`/`Audit`/`ProjectNaming`/`JobQueue` referenced via `use` at handler top OR fully-qualified (handler is required mid-router; `use` at file top works since it's a fresh include — verify by test).
+**NOTE (implementer):** `Validation`/`Audit`/`JobQueue` are referenced — they are already autoloaded (used by the existing projects.php handler). `ProjectNaming` 은 위에서 fully-qualified `\Soritune\Developers\ProjectNaming` 로 호출했으니 use 문 불필요. github_repo 는 위 코드대로 intended full_name 을 먼저 저장하고 job 이 createRepo 후 실제 full_name 으로 덮어쓴다(run_project_init.php Step 8 의 `UPDATE projects SET github_repo=?`).
 - [ ] **Step 4: Add wizard form to `public_html/admin/projects.php`** — extend the existing register dialog (or add a new one) with fields: slug, name, description, dev_subdomain (default `dev-<slug>.soritune.com`), prod_subdomain (default `<slug>.soritune.com`), members (multi-select of active users). On submit POST `op=init`. Reuse existing escape()/preventDefault-first/CSRF pattern. After success, show "프로비저닝 시작 — 작업 큐에서 진행 확인" and link to jobs page.
 - [ ] **Step 5: Run test + full suite + smoke**
 ```bash
@@ -1080,7 +1083,7 @@ git -c user.name="박주희" -c user.email="soritunenglish@gmail.com" commit -m 
 - 실패처리/멱등/롤백 → Task 8 fail 핸들러 + Task 9 ✓
 - 테스트(멱등 재실행 포함) → 각 unit test + Task 9 e2e ✓
 
-**Placeholder scan:** Task 7 Step 3 의 `$GLOBALS['__init_repo']` 는 의도적 "구현자가 교체" 주석과 함께 둠(github_repo NOT NULL 처리 설명). 그 외 TBD 없음. → 구현자는 NOTE 대로 `loadEnv()['GITHUB_ACCOUNT']` 기반으로 교체할 것.
+**Placeholder scan:** 없음. (이전 초안의 `$GLOBALS['__init_repo']` 임시코드는 Task 7 Step 3 에서 `loadEnv()['GITHUB_ACCOUNT']` 기반 실제 코드로 교체 완료.)
 
 **Type consistency:** GithubAdmin.createRepo→{ok,created,full_name,repo_url}, addRulesets→{ok,ruleset_ids}, Route53.upsertA→{ok,fqdn}, SiteManagerClient.provision→{ok,skipped}/{ok:false,step,error}, ProjectNaming.fromSubdomain→{bare,derived,site_dir,code_dir,db_name}. run_project_init.php·테스트가 동일 키 사용. JobQueue.enqueue(type,payload,userId,projectId) Plan A 시그니처 일치.
 
