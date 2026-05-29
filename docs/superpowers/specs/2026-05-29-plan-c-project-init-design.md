@@ -30,7 +30,7 @@
 
 **포함 (Plan C):**
 - 관리자 "새 프로젝트" 마법사 폼 (slug/name/desc/dev_subdomain/prod_subdomain/members)
-- 단일 `project_init` job: GitHub repo(+dev 브랜치+ruleset 3개+collaborator) → Route53 A레코드×2 → site_manager dev/prod(vhost+certbot+빈DB) → git clone×2 → 권한설정 → projects active
+- 단일 `project_init` job: GitHub repo(+dev 브랜치+ruleset 2개[main/dev 보호]+collaborator) → Route53 A레코드×2 → site_manager dev/prod(vhost+certbot+빈DB, apache:apache+SELinux 까지 처리) → 임시 clone 후 public_html 로 이동×2 → projects active
 - 부분실패 result 누적 + 대시보드 stuck 경고 + 수동 롤백 스크립트
 
 **제외 (비목표):**
