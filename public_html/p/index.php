@@ -41,8 +41,8 @@ if ($u['role'] === 'admin') {
           <h2><?= e($p['name'] ?? '') ?></h2>
           <p><?= e($p['description'] ?? '') ?></p>
           <div class="urls">
-            <a href="https://<?= e($p['dev_subdomain'] ?? '') ?>" target="_blank">개발 화면</a>
-            <a href="https://<?= e($p['prod_subdomain'] ?? '') ?>" target="_blank">운영 화면</a>
+            <a href="https://<?= e($p['dev_subdomain'] ?? '') ?>" target="_blank" rel="noopener noreferrer">개발 화면</a>
+            <a href="https://<?= e($p['prod_subdomain'] ?? '') ?>" target="_blank" rel="noopener noreferrer">운영 화면</a>
           </div>
         </li>
       <?php endforeach; ?>
