@@ -79,13 +79,15 @@ admin/projects.php [새 프로젝트] 폼
 `.env`: `GITHUB_TOKEN`, `GITHUB_ACCOUNT=<username>`, `GITHUB_ACCOUNT_TYPE=user` (org 분기 여지).
 모든 호출은 `GH_TOKEN=<pat> gh api ...` 또는 동등한 runner. 메서드:
 
-- `createRepo(slug, description): array` — `POST /user/repos` (private, auto_init=true → main 초기커밋). 이미 있으면 `{ok:false, error:'repo exists'}` (멱등). 성공 시 `{ok:true, repo_url, full_name}`.
-- `createDevBranch(repo): array` — main HEAD sha 조회 → `POST /repos/<acct>/<repo>/git/refs` (refs/heads/dev). 이미 있으면 ok.
-- `addRulesets(repo): array` — 결정16 의 3개:
+- `createRepo(slug, description): array` — `POST /user/repos` (private, auto_init=true → main 초기커밋).
+  **멱등 계약(P1 수정):** 성공 시 `{ok:true, repo_url, full_name, created:true}`.
+  **이미 존재하면 422(name exists) 를 받아 `GET /repos/<acct>/<slug>` 로 full_name/repo_url 을 복구해 `{ok:true, repo_url, full_name, created:false}` 반환** — 부분실패 재실행이 1단계에서 막히지 않도록. (단 그 repo 가 우리 계정 소유가 아니면 `{ok:false, error:'repo name taken by other owner'}`.)
+- `createDevBranch(repo): array` — main HEAD sha 조회 → `POST /repos/<acct>/<repo>/git/refs` (refs/heads/dev). 이미 있으면(422) `{ok:true, existed:true}`.
+- `addRulesets(repo): array` — **2개** (P0-B 수정: ref-name 제한 제거 — 직원의 feature/*·fix/* 작업 브랜치 생성을 막지 않기 위해):
   ① main: direct push/force-push/deletion 차단 (repo admin bypass)
   ② dev: force-push/deletion 차단
-  ③ ref-name 제한: 새 ref 생성은 `^(main|dev)$` 만
-  **실패 시 전체 job failed** (보안 invariant — 보호 없는 repo 는 active 안 함). 부분등록 시 result.ruleset_ids 에 기록.
+  (③ ref-name `^(main|dev)$` 제한은 **제거**. 협업 흐름: 직원이 feature 브랜치 자유 생성 → PR 로 dev 머지.)
+  **실패 시 전체 job failed** (보안 invariant — 보호 없는 repo 는 active 안 함). 부분등록 시 result.ruleset_ids 에 기록. 재실행 시 이미 있는 ruleset 은 GET 으로 확인 후 skip(멱등).
 - `addCollaborators(repo, github_usernames[], role='push'): array` — 각 `PUT /repos/.../collaborators/<user>`. github_username 미설정 멤버 → `skipped[]` 기록(가입 후 user_repo_grant 후처리). collaborator 실패는 job failed 아님(경고).
 
 ### 3.2 Route53
@@ -99,6 +101,7 @@ admin/projects.php [새 프로젝트] 폼
   `check_conflict → create_folders → create_database → create_vhost_http → issue_ssl → create_vhost_ssl`.
   각 액션: `_APP/jobs/pending/<uniqid>.json {action, subdomain, ...}` 떨굼 → 기존 root cron 처리 → `_APP/jobs/done/<uniqid>.json` 폴링(timeout 5분). success 아니면 시퀀스 중단 + 단계 기록.
   - `create_database` 는 **빈 DB만** 생성(스키마 없음) — spec §6.5 "DEV 는 빈 스키마만" 과 일치. PROD→DEV 자동복사 절대 X.
+  - **소유권/SELinux (P0-A):** site_manager `create_folders` 가 디렉토리를 **apache:apache** 로 만들고 `.db_credentials`(640)·logs(httpd_log_t semanage+restorecon)·기본 `public_html/index.php`(ROBOTION 랜딩)까지 넣는다. 즉 root 권한 작업(소유권·SELinux)은 **전부 site_manager(기존 root cron) 안에서** 끝난다 → 포털 worker(apache)는 추가 chown/restorecon 불필요. (이것이 "새 root 권한 0" 의 실제 근거.)
 - `issue_ssl` 은 DNS 가 서버를 가리킨 뒤라야 http-01 통과 → §4 순서에서 Route53 을 먼저, **DNS 전파 폴링** 후 호출.
 
 ## 4. project_init 오케스트레이션 순서 (job_project_init.sh)
@@ -106,20 +109,29 @@ admin/projects.php [새 프로젝트] 폼
 ```
 0. job 읽기, projects row = provisioning
 1. GitHub:
-   createRepo → createDevBranch → addRulesets(실패=job failed) → addCollaborators(skipped 기록)
-2. Route53: upsertA(dev_subdomain) , upsertA(prod_subdomain) → 3.37.213.224
+   createRepo(멱등: exists→GET 복구) → createDevBranch → addRulesets(2개, 실패=job failed) → addCollaborators(skipped 기록)
+2. Route53: upsertA(dev_subdomain) , upsertA(prod_subdomain) → 3.37.213.224 (UPSERT 멱등)
 3. DNS 전파 대기: dig/getent 로 fqdn 이 IP 로 풀릴 때까지 짧게 폴링 (timeout 3분).
-   ※ 메모리: AWS VPC 리졸버(172.26.0.2)가 옛 NXDOMAIN negative-cache 가능 →
-     로컬 해석 실패해도 certbot http-01(공개망)엔 무관. 그래도 issue_ssl 에 재시도 둠.
+   ※ 실패판정(P1-openQ): 로컬 해석이 timeout 내 IP 로 안 풀려도 **fatal 로 보지 않고** 다음으로 진행.
+     이유 — AWS VPC 리졸버(172.26.0.2)가 옛 NXDOMAIN 을 negative-cache 해서 *로컬* 해석이
+     한동안 실패할 수 있으나 certbot http-01(공개망 LE)엔 무관. 실제 실패 판정은 4/5단계의
+     issue_ssl 결과로만 한다(issue_ssl 자체에 재시도 N회). 3단계 폴링은 "되도록 기다림"일 뿐.
 4. SiteManagerClient::provision(dev_subdomain)   [check_conflict..create_vhost_ssl]
 5. SiteManagerClient::provision(prod_subdomain)
 6. git clone (PAT HTTPS, credential helper 로 토큰 주입 — URL/로그 노출 X):
-   dev_dir ← --branch dev , prod_dir ← --branch main
-7. 권한: chown -R ec2-user:apache <dir>; find -type d chmod 2775(setgid); -type f 664;
-   restorecon -R <dir> (SELinux 기본 컨텍스트). ※ site_manager create_folders 소유권과
-   다르면 보정 — 구현 시 create_folders 실제 소유권 확인 후 결정.
-8. projects: status='active', dev_dir, prod_dir, dev_db_name, prod_db_name,
+   **임시 clone 후 내용 이동(P1 수정 — site_manager 가 public_html 에 기본 index.php 를 이미 넣어
+   `git clone <dir>` 는 무조건 실패하므로):**
+   - `git clone --branch dev <repo> <tmp_dev>` (빈 임시 디렉토리)
+   - site_manager 산출물 보존: `.db_credentials`(SITE_DIR 레벨, public_html 밖이라 영향 없음)는 그대로.
+     public_html 의 기본 index.php/README 는 repo 내용으로 대체.
+   - `tmp_dev/*` + `tmp_dev/.git` → `dev_dir/public_html/` 로 이동(기존 기본 index.php 덮어씀), tmp 삭제.
+     (또는 public_html 을 비우고 tmp 를 public_html 로 rename — 어느 쪽이든 "빈 곳에 clone → 자리 이동".)
+   - prod 동일: `--branch main` → `prod_dir/public_html/`.
+   - 소유권: 이동 후에도 apache:apache 유지(이동 주체가 apache worker). 필요 시 site_manager 에 재-chown 액션 위임(별도 root 작업 신설 금지 — 가급적 apache 소유로 자연 유지).
+7. projects: status='active', dev_dir, prod_dir, dev_db_name, prod_db_name,
    last_synced_commit=<dev HEAD>, last_prod_commit=<main HEAD>, init_job_id
+   (이전 spec 의 chown/chmod/restorecon "7단계" 는 **삭제** — site_manager 가 apache:apache+SELinux 를
+    이미 처리하므로 포털 worker 의 root 작업 불필요. "새 root 권한 0" 원칙 준수. → P0-A 해소.)
 9. result JSON 저장 (각 단계 ok/fail + repo_url, ruleset_ids, skipped_members, urls).
 ```
 
@@ -135,26 +147,33 @@ admin/projects.php [새 프로젝트] 폼
 - 실패 시: `jobs.status='failed'` + `error_message`, projects 는 `provisioning` 에 stuck.
 - 대시보드(jobs 화면 + projects 카드): provisioning 에서 멈춘 프로젝트에 "init 실패 — 수동 정리 필요" 경고.
 - 정리: `scripts/manual_rollback_project.sh <slug>` — repo·ruleset 삭제(gh), Route53 레코드 삭제(aws), site_manager backup_and_clean(dev/prod), DB drop, dir 삭제, projects archived. 각 단계 best-effort(없으면 skip).
-- **멱등 재실행**: 고친 뒤 같은 project_init 재실행 가능 — createRepo(exists 체크), Route53(UPSERT), check_conflict(이미 있으면 fail→해당 단계 skip 로직), clone(dir 존재 시 skip).
+- **멱등 재실행**: 고친 뒤 같은 project_init 재실행 가능 —
+  - createRepo: exists→GET 으로 full_name/repo_url 복구해 ok 로 진행 (§3.1 멱등 계약).
+  - createDevBranch/addRulesets: 이미 있으면 확인 후 skip.
+  - Route53: UPSERT(항상 멱등).
+  - site_manager: 각 사이트 시작 시 check_conflict 가 "이미 존재" 보고하면 그 사이트의 provision 시퀀스를 skip(이미 완료된 것으로 간주)하고 다음 단계로.
+  - clone(§4 6단계): public_html 에 repo 의 `.git` 이 이미 있으면(=clone 완료) skip; 없으면 임시 clone→이동 재수행.
 
 ## 6. 보안 / 운영 invariant
 
 1. **PAT 는 .env 시크릿** (apache:apache 640), settings 화면 마스킹. 로그/URL 에 토큰 노출 금지(git credential helper 사용).
 2. **prod 머지·push 자동화 없음** — Plan C 는 생성만. main 직접 push 는 GitHub ruleset 이 차단(PAT=admin 만 가능하나 Plan C 는 repo 생성 직후 손 안 댐).
-3. **branch ruleset 자동 등록 실패 시 job failed** (보안 invariant).
+3. **branch ruleset 2개(main/dev 보호) 자동 등록 실패 시 job failed** (보안 invariant). ref-name 제한은 협업 차단이라 제외(P0-B).
 4. **DEV DB = 빈 스키마만**. PROD→DEV 복사 절대 X.
-5. **새 root 권한 0** — root 작업은 기존 site_manager 파일큐 위임.
-6. **삭제 없음(포털 DB)** — projects 는 archived. 외부자원 삭제는 manual_rollback 만.
-7. **입력 검증**: slug regex `^[a-z][a-z0-9-]{1,38}` + 끝 하이픈 금지(Plan A Validation), subdomain isValidSubdomain, path traversal 차단.
-8. **인젝션**: gh/aws/git 호출 인자 escapeshellarg, slug/subdomain 은 검증된 값만.
+5. **새 root 권한 0** — 소유권(apache:apache)·SELinux·vhost·certbot·DB 등 root 작업은 전부 기존 site_manager 파일큐+root cron 에 위임. 포털 worker(apache)는 GitHub/Route53/clone+파일이동만(chown/restorecon 직접 호출 금지) (P0-A).
+6. **신규 프로젝트 소유권 = apache:apache** (junior 등 기존 사이트와 동일, site_manager 가 생성). spec 원안의 `ec2-user:apache` 전제는 폐기.
+7. **삭제 없음(포털 DB)** — projects 는 archived. 외부자원 삭제는 manual_rollback 만.
+8. **입력 검증**: slug regex `^[a-z][a-z0-9-]{1,38}` + 끝 하이픈 금지(Plan A Validation), subdomain isValidSubdomain, path traversal 차단.
+9. **인젝션**: gh/aws/git 호출 인자 escapeshellarg, slug/subdomain 은 검증된 값만.
 
 ## 7. 테스트 전략
 
-- **GithubAdminTest** (unit): runner mock 으로 createRepo/createDevBranch/addRulesets/addCollaborators. repo-exists, ruleset 실패→fail, skipped member.
-- **Route53Test** (unit): runner mock, UPSERT changeset JSON 형식.
-- **SiteManagerClientTest** (unit): 임시 pending/done 디렉토리로 enqueue→폴링→파싱. success/fail/timeout.
+- **GithubAdminTest** (unit): runner mock 으로 createRepo/createDevBranch/addRulesets/addCollaborators. 케이스: 신규생성(created:true), **repo-exists→GET 복구→created:false (멱등 계약)**, **다른 소유자 이름충돌→ok:false**, ruleset 2개 등록·실패→fail, dev 브랜치 existed, skipped member.
+- **Route53Test** (unit): runner mock, UPSERT changeset JSON 형식. 재호출(UPSERT) 멱등 확인.
+- **SiteManagerClientTest** (unit): 임시 pending/done 디렉토리로 enqueue→폴링→파싱. success/fail/timeout. **재실행: check_conflict 가 이미존재 보고 시 그 사이트는 skip 로 진행되는지**.
 - **op=init API** (integration): ProjectApiTest 패턴. 게이트(requireAdmin/CSRF/검증/중복) + enqueue 됐는지 확인 (**실제 job 실행 안 함** — payload/projects provisioning row 만 검증). teardown 정리.
-- **수동 e2e**: 실제 테스트 프로젝트 1개 생성 → repo/DNS/사이트/clone 확인 → `manual_rollback_project.sh` 로 정리. phpunit 에선 절대 외부생성 안 함(junior 정책).
+- **멱등 재실행 (unit, P1-openQ 필수):** 핵심 invariant 가 멱등성이므로 명시 테스트. GithubAdmin/Route53/SiteManagerClient 각 mock 에서 "1차 일부 성공 후 2차 동일 호출" 시퀀스가 (a) 이미 된 단계는 skip/ok, (b) 안 된 단계부터 진행, (c) 최종 동일 결과로 수렴함을 검증. (오케스트레이터 bash 는 단위테스트 어려우므로 이 멱등 계약을 컴포넌트 레벨에서 보장.)
+- **수동 e2e**: 실제 테스트 프로젝트 1개 생성 → repo/DNS/사이트/clone 확인 → **일부러 중간 실패 유발 후 같은 init 재실행이 끝까지 진행되는지(멱등 e2e)** → `manual_rollback_project.sh` 로 정리. phpunit 에선 절대 외부생성 안 함(junior 정책).
 
 ## 8. 구현 순서 (writing-plans 가 task 분해)
 
