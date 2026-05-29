@@ -1,36 +1,146 @@
-:root { --ink:#37352f; --primary:#7C53D8; --hairline:#e6e4df; --canvas:#ffffff; --error:#ef4444; }
-body { font-family: -apple-system, "Pretendard", system-ui, sans-serif; color: var(--ink); margin: 0; background: var(--canvas); }
-.login-shell { max-width: 360px; margin: 80px auto; padding: 0 16px; }
-.login-shell h1 { font-size: 24px; margin-bottom: 4px; }
-.login-shell form { display: grid; gap: 12px; margin-top: 24px; }
-.login-shell label { display: grid; gap: 4px; font-size: 14px; }
-.login-shell input { padding: 10px; border: 1px solid var(--hairline); border-radius: 8px; font-size: 14px; }
-.login-shell button { background: var(--primary); color: #fff; padding: 10px; border: 0; border-radius: 8px; font-weight: 500; cursor: pointer; }
-.error { background: #fee2e2; color: var(--error); padding: 8px 12px; border-radius: 8px; font-size: 13px; }
-.topnav { display: flex; gap: 16px; padding: 12px 24px; border-bottom: 1px solid var(--hairline); align-items: center; font-size: 14px; }
+/* ============================================================
+   developers.soritune.com — global stylesheet
+   Base element styles first so EVERY control (incl. JS-generated
+   buttons/links with no class) is styled, then components.
+   ============================================================ */
+
+/* ---- Design tokens ---- */
+:root {
+  --ink:#37352f; --muted:#7a736a; --primary:#7C53D8; --primary-dark:#6843c4;
+  --hairline:#e6e4df; --canvas:#ffffff; --surface:#fbfbfa; --error:#ef4444;
+  --ok:#16a34a; --radius:10px; --shadow:0 1px 3px rgba(15,15,15,.08);
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: -apple-system, "Pretendard", system-ui, "Apple SD Gothic Neo", sans-serif;
+  color: var(--ink); margin: 0; background: var(--surface); line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 { font-size: 24px; margin: 0 0 4px; }
+h2 { font-size: 17px; margin: 0 0 10px; }
+p { margin: 0 0 8px; }
+
+/* ---- Base form controls (used everywhere, classed or not) ---- */
+input, select, textarea {
+  font: inherit; width: 100%; padding: 9px 11px; color: var(--ink);
+  background: #fff; border: 1px solid var(--hairline); border-radius: 8px;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none; border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(124,83,216,.15);
+}
+textarea { min-height: 72px; resize: vertical; }
+select { appearance: none; background-image:
+  linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+  linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%;
+  background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 30px;
+}
+
+/* ---- Base buttons: neutral by default, hover feedback ---- */
+button {
+  font: inherit; font-weight: 500; cursor: pointer;
+  padding: 8px 14px; border: 1px solid var(--hairline);
+  border-radius: 8px; background: #fff; color: var(--ink);
+  transition: background .12s ease, border-color .12s ease;
+}
+button:hover { background: var(--surface); border-color: #d8d4cd; }
+button:active { transform: translateY(1px); }
+button:disabled { opacity: .5; cursor: not-allowed; }
+
+/* Primary buttons: page-header CTA, login, dialog OK, submit, .page <form> action */
+.page-header button, .login-shell button, button[type="submit"],
+dialog form button[value="ok"], .page form button, .btn-primary, #grantBtn {
+  background: var(--primary); color: #fff; border-color: var(--primary);
+}
+.page-header button:hover, .login-shell button:hover, button[type="submit"]:hover,
+dialog form button[value="ok"]:hover, .page form button:hover, .btn-primary:hover, #grantBtn:hover {
+  background: var(--primary-dark); border-color: var(--primary-dark);
+}
+/* Dialog cancel stays neutral even though it's not value=ok */
+dialog form button[value="cancel"] { background: #fff; color: var(--ink); border-color: var(--hairline); }
+dialog form button[value="cancel"]:hover { background: var(--surface); }
+
+/* ---- Top navigation ---- */
+.topnav {
+  display: flex; gap: 16px; align-items: center; font-size: 14px;
+  padding: 12px 24px; background: #fff; border-bottom: 1px solid var(--hairline);
+}
 .topnav strong { margin-right: 12px; }
-.topnav a { color: var(--ink); text-decoration: none; }
+.topnav a { color: var(--muted); text-decoration: none; padding: 4px 2px; }
+.topnav a:hover { color: var(--ink); }
 .topnav .grow { flex: 1; }
-.page { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
-.project-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-.project-card { padding: 20px; border-radius: 12px; border: 1px solid var(--hairline); }
-.project-card h2 { margin: 0 0 6px; font-size: 18px; }
-.project-card .urls { display: flex; gap: 12px; margin-top: 12px; }
-.tint-peach { background: #ffe9d6; }
-.tint-rose { background: #fce4ec; }
-.tint-mint { background: #d5f5e3; }
-.tint-lavender { background: #e7e2f7; }
-.tint-sky { background: #d8ecf9; }
-.tint-yellow { background: #fff5ce; }
-.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-.page-header button { background: var(--primary); color:#fff; border:0; padding:8px 14px; border-radius:8px; cursor:pointer; }
-.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.data-table th, .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--hairline); text-align: left; }
-dialog { padding: 0; border: 0; border-radius: 12px; }
-dialog form { padding: 24px; min-width: 360px; display: grid; gap: 12px; }
-dialog form menu { display: flex; gap: 8px; justify-content: flex-end; padding: 0; margin: 0; }
-dialog form button { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--hairline); background: #fff; cursor: pointer; }
-dialog form button[value="ok"] { background: var(--primary); color: #fff; border-color: var(--primary); }
-.card-actions { display: flex; gap: 12px; margin-top: 12px; align-items: center; }
-.hint { color: #888; font-size: 13px; }
-.slug { color: #888; font-size: 13px; }
+
+/* ---- Page shell ---- */
+.page { max-width: 1100px; margin: 28px auto; padding: 0 24px; }
+.page section { margin-bottom: 32px; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; gap: 12px; }
+.back-link, .page > a { display: inline-block; margin-bottom: 12px; color: var(--muted); text-decoration: none; font-size: 14px; }
+.back-link:hover, .page > a:hover { color: var(--ink); }
+
+/* Generic forms on content pages (e.g. me.php) */
+.page form { display: grid; gap: 14px; max-width: 420px; }
+.page form label { display: grid; gap: 5px; font-size: 14px; color: var(--muted); }
+.page form button { justify-self: start; }
+
+/* ---- Login ---- */
+.login-shell { max-width: 360px; margin: 84px auto; padding: 0 16px; }
+.login-shell p { color: var(--muted); }
+.login-shell form { display: grid; gap: 14px; margin-top: 24px; }
+.login-shell label { display: grid; gap: 5px; font-size: 14px; color: var(--muted); }
+.login-shell button { width: 100%; padding: 11px; }
+
+/* ---- Alerts ---- */
+.error { background: #fee2e2; color: var(--error); padding: 9px 13px; border-radius: 8px; font-size: 13px; }
+
+/* ---- Project cards ---- */
+.project-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.project-card { padding: 20px; border-radius: var(--radius); border: 1px solid var(--hairline); background: #fff; box-shadow: var(--shadow); }
+.project-card h2 { margin: 0 0 4px; font-size: 18px; }
+.project-card .slug { color: var(--muted); font-size: 13px; margin: 0 0 4px; }
+.project-card p { color: var(--muted); font-size: 14px; }
+.project-card .urls { display: flex; gap: 8px; margin-top: 14px; }
+.project-card .card-actions { display: flex; gap: 8px; margin-top: 10px; align-items: center; flex-wrap: wrap; }
+
+/* Links inside cards rendered as pill buttons so they look clickable */
+.urls a, .card-actions a {
+  display: inline-block; font-size: 13px; text-decoration: none;
+  padding: 6px 12px; border-radius: 7px; border: 1px solid var(--hairline);
+  background: rgba(255,255,255,.7); color: var(--ink);
+}
+.urls a:hover, .card-actions a:hover { background: #fff; border-color: var(--primary); color: var(--primary); }
+.card-actions button { padding: 6px 12px; font-size: 13px; }
+
+/* Tint backgrounds keep cards faintly colored; inner pills stay legible */
+.tint-peach { background: #ffe9d6; } .tint-rose { background: #fce4ec; }
+.tint-mint { background: #d5f5e3; } .tint-lavender { background: #e7e2f7; }
+.tint-sky { background: #d8ecf9; } .tint-yellow { background: #fff5ce; }
+
+/* ---- Data tables ---- */
+.data-table { width: 100%; border-collapse: collapse; font-size: 14px; background: #fff; border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden; }
+.data-table th { padding: 10px 12px; text-align: left; background: var(--surface); color: var(--muted); font-weight: 600; border-bottom: 1px solid var(--hairline); }
+.data-table td { padding: 9px 12px; border-bottom: 1px solid var(--hairline); vertical-align: middle; }
+.data-table tr:last-child td { border-bottom: 0; }
+.data-table td button { padding: 5px 10px; font-size: 13px; margin-right: 4px; }
+
+/* ---- Member management list ---- */
+#members { list-style: none; padding: 0; margin: 0 0 8px; }
+#members li { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; background: #fff; border: 1px solid var(--hairline); border-radius: 8px; margin-bottom: 8px; font-size: 14px; }
+#members li button { padding: 5px 10px; font-size: 13px; }
+#userSelect { width: auto; min-width: 240px; margin-right: 8px; }
+
+/* ---- Dialog (modal forms) ---- */
+dialog { padding: 0; border: 0; border-radius: var(--radius); box-shadow: 0 12px 40px rgba(15,15,15,.2); }
+dialog::backdrop { background: rgba(15,15,15,.35); }
+dialog form { padding: 24px; min-width: 380px; max-width: 460px; display: grid; gap: 13px; }
+dialog form h2 { margin-bottom: 2px; }
+dialog form label { display: grid; gap: 5px; font-size: 14px; color: var(--muted); }
+dialog form menu { display: flex; gap: 8px; justify-content: flex-end; padding: 0; margin: 8px 0 0; }
+
+/* ---- Misc ---- */
+.hint { color: var(--muted); font-size: 13px; }
+.slug { color: var(--muted); font-size: 13px; }
+code { background: var(--surface); padding: 2px 6px; border-radius: 5px; font-size: 13px; }
