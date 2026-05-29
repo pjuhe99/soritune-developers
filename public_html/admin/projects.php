@@ -8,7 +8,7 @@ $token = csrfToken();
 <!doctype html>
 <html lang="ko"><head>
 <meta charset="utf-8"><title>프로젝트 — developers.soritune.com</title>
-<link rel="stylesheet" href="/assets/style.css?v=2">
+<link rel="stylesheet" href="/assets/style.css?v=3">
 <meta name="csrf-token" content="<?= e($token) ?>">
 </head><body>
 <nav class="topnav">
@@ -65,6 +65,7 @@ async function load() {
         <a href="https://${escape(p.prod_subdomain)}" target="_blank" rel="noopener noreferrer">운영</a>
       </div>
       <div class="card-actions">
+        <a href="/admin/project_detail.php?id=${p.id}">상세</a>
         <a href="/admin/project_members.php?id=${p.id}">멤버 관리</a>
         ${p.status === 'active' ? `<button data-act="archive" data-id="${p.id}">보관</button>` : ''}
       </div>

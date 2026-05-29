@@ -9,7 +9,7 @@ $projectId = (int)($_GET['id'] ?? 0);
 <!doctype html>
 <html lang="ko"><head>
 <meta charset="utf-8"><title>멤버 관리 — developers.soritune.com</title>
-<link rel="stylesheet" href="/assets/style.css?v=2">
+<link rel="stylesheet" href="/assets/style.css?v=3">
 <meta name="csrf-token" content="<?= e($token) ?>">
 </head><body>
 <nav class="topnav">

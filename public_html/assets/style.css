@@ -144,3 +144,17 @@ dialog form menu { display: flex; gap: 8px; justify-content: flex-end; padding: 
 .hint { color: var(--muted); font-size: 13px; }
 .slug { color: var(--muted); font-size: 13px; }
 code { background: var(--surface); padding: 2px 6px; border-radius: 5px; font-size: 13px; }
+
+/* ---- Project detail (Plan B observability) ---- */
+.stat-card { padding: 16px; border: 1px solid var(--hairline); border-radius: var(--radius); background: #fff; }
+.git-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0; }
+.git-cards h3 { margin: 0 0 8px; font-size: 15px; }
+.commit-log { list-style: none; padding: 0; margin: 8px 0 0; font-size: 13px; }
+.commit-log li { padding: 3px 0; border-bottom: 1px solid var(--surface); }
+.meta p { margin: 4px 0; font-size: 14px; }
+.badge { display: inline-block; padding: 1px 7px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--surface); color: var(--muted); }
+.badge.ok { background: #dcfce7; color: var(--ok); }
+.badge.bad { background: #fee2e2; color: var(--error); }
+.ok { color: var(--ok); } .warn { color: #b45309; } .bad { color: var(--error); } .muted { color: var(--muted); }
+.logbox { background: #1e1e1e; color: #e6e6e6; padding: 12px; border-radius: 8px; font-size: 12px; overflow-x: auto; white-space: pre-wrap; }
+@media (max-width: 720px) { .git-cards { grid-template-columns: 1fr; } }

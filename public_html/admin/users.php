@@ -8,7 +8,7 @@ $token = csrfToken();
 <!doctype html>
 <html lang="ko"><head>
 <meta charset="utf-8"><title>사용자 — developers.soritune.com</title>
-<link rel="stylesheet" href="/assets/style.css?v=2">
+<link rel="stylesheet" href="/assets/style.css?v=3">
 <meta name="csrf-token" content="<?= e($token) ?>">
 </head><body>
 <nav class="topnav">
