@@ -66,7 +66,7 @@ $token = csrfToken();
 <head>
 <meta charset="utf-8">
 <title>로그인 — developers.soritune.com</title>
-<link rel="stylesheet" href="/assets/style.css?v=3">
+<link rel="stylesheet" href="/assets/style.css?v=4">
 </head>
 <body>
 <main class="login-shell">

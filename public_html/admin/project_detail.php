@@ -10,7 +10,7 @@ if ($pid <= 0) { header('Location: /admin/projects.php'); exit; }
 <!doctype html>
 <html lang="ko"><head>
 <meta charset="utf-8"><title>프로젝트 상세 — developers.soritune.com</title>
-<link rel="stylesheet" href="/assets/style.css?v=3">
+<link rel="stylesheet" href="/assets/style.css?v=4">
 <meta name="csrf-token" content="<?= e($token) ?>">
 </head><body>
 <nav class="topnav">

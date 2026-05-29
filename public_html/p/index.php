@@ -20,7 +20,7 @@ if ($u['role'] === 'admin') {
 <!doctype html>
 <html lang="ko"><head>
 <meta charset="utf-8"><title>내 프로젝트 — developers.soritune.com</title>
-<link rel="stylesheet" href="/assets/style.css?v=3">
+<link rel="stylesheet" href="/assets/style.css?v=4">
 </head><body>
 <nav class="topnav">
   <strong>developers.soritune.com</strong>
