@@ -7,3 +7,18 @@ body { font-family: -apple-system, "Pretendard", system-ui, sans-serif; color: v
 .login-shell input { padding: 10px; border: 1px solid var(--hairline); border-radius: 8px; font-size: 14px; }
 .login-shell button { background: var(--primary); color: #fff; padding: 10px; border: 0; border-radius: 8px; font-weight: 500; cursor: pointer; }
 .error { background: #fee2e2; color: var(--error); padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+.topnav { display: flex; gap: 16px; padding: 12px 24px; border-bottom: 1px solid var(--hairline); align-items: center; font-size: 14px; }
+.topnav strong { margin-right: 12px; }
+.topnav a { color: var(--ink); text-decoration: none; }
+.topnav .grow { flex: 1; }
+.page { max-width: 1200px; margin: 24px auto; padding: 0 24px; }
+.project-list { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+.project-card { padding: 20px; border-radius: 12px; border: 1px solid var(--hairline); }
+.project-card h2 { margin: 0 0 6px; font-size: 18px; }
+.project-card .urls { display: flex; gap: 12px; margin-top: 12px; }
+.tint-peach { background: #ffe9d6; }
+.tint-rose { background: #fce4ec; }
+.tint-mint { background: #d5f5e3; }
+.tint-lavender { background: #e7e2f7; }
+.tint-sky { background: #d8ecf9; }
+.tint-yellow { background: #fff5ce; }
