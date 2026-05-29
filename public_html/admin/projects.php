@@ -24,6 +24,7 @@ $token = csrfToken();
   <header class="page-header">
     <h1>프로젝트</h1>
     <button id="btnNew">+ 프로젝트 등록</button>
+    <button id="btnInit">+ 새 프로젝트(자동 생성)</button>
   </header>
   <div id="cards" class="project-list"><p>불러오는 중…</p></div>
 </main>
@@ -47,6 +48,22 @@ $token = csrfToken();
       </select>
     </label>
     <menu><button value="cancel">취소</button><button id="regSubmit" value="ok">등록</button></menu>
+  </form>
+</dialog>
+<dialog id="initDlg">
+  <form id="initForm" method="dialog">
+    <h2>새 프로젝트(자동 생성)</h2>
+    <p class="hint">슬러그를 입력하면 서브도메인이 자동 완성됩니다. 프로비저닝 작업이 큐에 등록됩니다.</p>
+    <label>슬러그 <input id="initSlug" name="slug" required pattern="[a-z][a-z0-9-]{1,38}" placeholder="my-project"></label>
+    <label>이름 <input name="name" required placeholder="My Project"></label>
+    <label>설명 <textarea name="description" rows="2" placeholder="(선택)"></textarea></label>
+    <label>dev 서브도메인 <input id="initDevSub" name="dev_subdomain" required placeholder="dev-my-project.soritune.com"></label>
+    <label>운영 서브도메인 <input id="initProdSub" name="prod_subdomain" required placeholder="my-project.soritune.com"></label>
+    <label>멤버 (선택)
+      <select id="initMembers" multiple size="5" style="width:100%"></select>
+    </label>
+    <input type="hidden" id="initMemberIds" name="member_ids" value="">
+    <menu><button value="cancel">취소</button><button id="initSubmit" value="ok">프로비저닝 시작</button></menu>
   </form>
 </dialog>
 <script>
@@ -85,6 +102,56 @@ document.getElementById('regSubmit').onclick = async (e) => {
   form.reset();
   regDlg.close(); load();
 };
+// — Init wizard —
+(async () => {
+  try {
+    const j = await (await fetch('/api/system.php?action=users&op=list')).json();
+    if (j.ok && Array.isArray(j.users)) {
+      const sel = document.getElementById('initMembers');
+      j.users.filter(u => u.active == 1 || u.active === true).forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u.id;
+        opt.textContent = `${u.display_name} (${u.username})`;
+        sel.appendChild(opt);
+      });
+    }
+  } catch (_) {}
+})();
+
+let devSubEdited = false, prodSubEdited = false;
+document.getElementById('initDevSub').addEventListener('input', () => { devSubEdited = true; });
+document.getElementById('initProdSub').addEventListener('input', () => { prodSubEdited = true; });
+document.getElementById('initSlug').addEventListener('blur', (e) => {
+  const slug = e.target.value.trim();
+  if (!slug) return;
+  if (!devSubEdited) document.getElementById('initDevSub').value = `dev-${slug}.soritune.com`;
+  if (!prodSubEdited) document.getElementById('initProdSub').value = `${slug}.soritune.com`;
+});
+
+document.getElementById('btnInit').onclick = () => {
+  devSubEdited = false; prodSubEdited = false;
+  document.getElementById('initForm').reset();
+  document.getElementById('initMembers').querySelectorAll('option').forEach(o => o.selected = false);
+  initDlg.showModal();
+};
+
+document.getElementById('initSubmit').onclick = async (e) => {
+  e.preventDefault();
+  const form = document.getElementById('initForm');
+  if (!form.reportValidity()) return;
+  // collect member_ids from multi-select
+  const sel = document.getElementById('initMembers');
+  const ids = Array.from(sel.selectedOptions).map(o => o.value).join(',');
+  document.getElementById('initMemberIds').value = ids;
+  const fd = new FormData(form);
+  fd.set('op', 'init');
+  fd.append('_csrf', csrf);
+  const j = await (await fetch('/api/system.php?action=projects', { method:'POST', body: fd })).json();
+  if (!j.ok) { alert(j.message); return; }
+  alert('프로비저닝을 시작했습니다 — 작업 큐에서 진행 상황을 확인하세요.');
+  location.href = '/admin/jobs.php';
+};
+
 cards.onclick = async (e) => {
   const btn = e.target.closest('button[data-act="archive"]');
   if (!btn) return;

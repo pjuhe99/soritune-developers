@@ -108,6 +108,57 @@ switch ($op) {
         return;
     }
 
+    case 'init': {
+        $slug   = trim((string)($_POST['slug'] ?? ''));
+        $name   = trim((string)($_POST['name'] ?? ''));
+        $desc   = trim((string)($_POST['description'] ?? ''));
+        $devSub = trim((string)($_POST['dev_subdomain'] ?? ''));
+        $prodSub= trim((string)($_POST['prod_subdomain'] ?? ''));
+        $memberIds = array_values(array_filter(array_map('intval', explode(',', (string)($_POST['member_ids'] ?? '')))));
+
+        if (!Validation::isValidSlug($slug)) { jsonError('invalid slug'); return; }
+        if ($name === '') { jsonError('name required'); return; }
+        if (!Validation::isValidSubdomain($devSub)) { jsonError('invalid dev_subdomain'); return; }
+        if (!Validation::isValidSubdomain($prodSub)) { jsonError('invalid prod_subdomain'); return; }
+
+        try {
+            $dev  = \Soritune\Developers\ProjectNaming::fromSubdomain($devSub);
+            $prod = \Soritune\Developers\ProjectNaming::fromSubdomain($prodSub);
+        } catch (\InvalidArgumentException $e) { jsonError('subdomain parse failed'); return; }
+
+        // github_repo is NOT NULL. Store intended full_name now; the project_init job
+        // overwrites it with the real full_name after createRepo.
+        $acct = trim((string)(loadEnv()['GITHUB_ACCOUNT'] ?? ''));
+        $githubRepo = $acct !== '' ? "$acct/$slug" : $slug;
+
+        $db = getDB();
+        $db->beginTransaction();
+        try {
+            $st = $db->prepare(
+                "INSERT INTO projects (slug,name,description,github_repo,dev_subdomain,prod_subdomain,dev_dir,prod_dir,dev_db_name,prod_db_name,status,created_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?, 'provisioning', ?)"
+            );
+            $st->execute([$slug,$name,($desc ?: null),$githubRepo,
+                $devSub,$prodSub,$dev['code_dir'],$prod['code_dir'],$dev['db_name'],$prod['db_name'],currentUser()['id']]);
+        } catch (\PDOException $e) {
+            $db->rollBack();
+            if (($e->errorInfo[1] ?? null) === 1062) { jsonError('slug already exists', 409); return; }
+            throw $e;
+        }
+        $pid = (int)$db->lastInsertId();
+        $jobId = \Soritune\Developers\JobQueue::enqueue('project_init', [
+            'project_id'=>$pid,'slug'=>$slug,'name'=>$name,'description'=>$desc,
+            'dev_subdomain'=>$devSub,'prod_subdomain'=>$prodSub,
+            'dev_bare'=>$dev['bare'],'prod_bare'=>$prod['bare'],
+            'member_ids'=>$memberIds,
+        ], (int)currentUser()['id'], $pid);
+        $db->prepare("UPDATE projects SET init_job_id=? WHERE id=?")->execute([$jobId,$pid]);
+        $db->commit();
+        Audit::writeFromRequest(currentUser()['id'], 'project.init', 'project', $pid, ['slug'=>$slug]);
+        jsonSuccess(['project'=>['id'=>$pid,'slug'=>$slug],'job_id'=>$jobId], 'provisioning');
+        return;
+    }
+
     default:
         jsonError("unknown op: $op", 404);
         return;
