@@ -15,11 +15,22 @@ require "vendor/autoload.php";
 require "public_html/config.php";
 use Soritune\Developers\JobQueue;
 $n = 0;
+$root = getcwd() . "/scripts";
 while (($job = JobQueue::claimNext()) !== null) {
     // Per-job try/catch: one failing job must not abort the drain (set -e) nor leave
     // a claimed job stuck in "running" forever — mark it failed instead.
     try {
-        JobQueue::markDone((int)$job["id"], true, null, ["note" => "Plan A stub - no handler"]);
+        if (($job["type"] ?? "") === "project_init") {
+            $rc = 0;
+            passthru("bash " . escapeshellarg($root . "/job_project_init.sh") . " " . (int)$job["id"], $rc);
+            $st = getDB()->prepare("SELECT status FROM jobs WHERE id = ?");
+            $st->execute([(int)$job["id"]]);
+            if ($st->fetchColumn() === "running") {
+                JobQueue::markDone((int)$job["id"], false, "orchestrator exited without marking (rc=$rc)");
+            }
+        } else {
+            JobQueue::markDone((int)$job["id"], true, null, ["note" => "Plan A stub - no handler"]);
+        }
     } catch (\Throwable $e) {
         JobQueue::markDone((int)$job["id"], false, $e->getMessage());
     }
