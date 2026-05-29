@@ -22,3 +22,12 @@ body { font-family: -apple-system, "Pretendard", system-ui, sans-serif; color: v
 .tint-lavender { background: #e7e2f7; }
 .tint-sky { background: #d8ecf9; }
 .tint-yellow { background: #fff5ce; }
+.page-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+.page-header button { background: var(--primary); color:#fff; border:0; padding:8px 14px; border-radius:8px; cursor:pointer; }
+.data-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.data-table th, .data-table td { padding: 8px 12px; border-bottom: 1px solid var(--hairline); text-align: left; }
+dialog { padding: 0; border: 0; border-radius: 12px; }
+dialog form { padding: 24px; min-width: 360px; display: grid; gap: 12px; }
+dialog form menu { display: flex; gap: 8px; justify-content: flex-end; padding: 0; margin: 0; }
+dialog form button { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--hairline); background: #fff; cursor: pointer; }
+dialog form button[value="ok"] { background: var(--primary); color: #fff; border-color: var(--primary); }
