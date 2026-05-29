@@ -135,11 +135,25 @@ admin/projects.php [새 프로젝트] 폼
 9. result JSON 저장 (각 단계 ok/fail + repo_url, ruleset_ids, skipped_members, urls).
 ```
 
-**디렉토리/DB 이름 규칙** (기존 사이트 관례):
-- dev_dir = `/var/www/html/_______site_SORITUNECOM_DEV_<SLUG_UPPER>`
-- prod_dir = `/var/www/html/_______site_SORITUNECOM_<SLUG_UPPER>`
-- dev_db_name = `SORITUNECOM_DEV_<SLUG_UPPER>`, prod_db_name = `SORITUNECOM_<SLUG_UPPER>`
-(SLUG_UPPER = slug 대문자, 하이픈→언더스코어. 구현 시 site_manager 의 실제 명명 규칙과 대조.)
+**디렉토리/DB 이름 규칙 — site_manager 가 subdomain 으로부터 도출 (실측, 중요):**
+site_manager.sh 는 인자가 `<action> <subdomain>` 이고, subdomain(=`.soritune.com` 을 뗀 라벨, 예 `dev-j`)에서
+`DERIVED=$(echo "$SUBDOMAIN" | tr 'a-z-' 'A-Z_')` 로 dir/DB 이름을 **자동 도출**한다:
+- SITE_DIR = `/var/www/html/_______site_SORITUNECOM_<DERIVED>`
+- DB_NAME = DB_USER = `SORITUNECOM_<DERIVED>`
+예) subdomain `dev-j` → DERIVED `DEV_J` → `_______site_SORITUNECOM_DEV_J`, DB `SORITUNECOM_DEV_J` (junior 현실과 일치).
+   subdomain `j`     → `J`     → `_______site_SORITUNECOM_J`,     DB `SORITUNECOM_J`.
+
+**따라서 포털은 slug 로 독립 계산하지 말고, 관리자가 입력한 subdomain 으로부터 site_manager 와 동일하게 도출해야 한다**
+(안 그러면 projects 테이블의 dev_dir/db_name 이 site_manager 가 실제 만든 것과 어긋남):
+- 입력: dev_subdomain (FQDN, 예 `camp-dev.soritune.com`), prod_subdomain (예 `camp.soritune.com`)
+- bare = FQDN 에서 `.soritune.com` 제거 (`camp-dev`, `camp`). **site_manager 에는 bare 를 넘긴다.**
+- DERIVED = `tr 'a-z-' 'A-Z_'` (`CAMP_DEV`, `CAMP`)
+- dev_dir/prod_dir/dev_db_name/prod_db_name = 위 공식으로 도출하여 projects 에 기록.
+- **subdomain 규칙 권고:** dev 는 `dev-<slug>`, prod 는 `<slug>` (junior 패턴). 단 코드는 입력된 subdomain 을
+  그대로 도출에 쓰므로 다른 패턴도 동작은 함(이름만 그에 맞게 생성). 마법사 폼이 기본값으로 `dev-<slug>`/`<slug>` 제시.
+- clone 후 코드 위치: site_manager 가 만드는 `public_html/` 안으로 (SITE_DIR/public_html). 즉 dev_dir = SITE_DIR,
+  실제 코드는 `SITE_DIR/public_html/` (Apache DocumentRoot). projects.dev_dir 는 SITE_DIR 저장(관측용 GitInspector 는
+  `.git` 이 public_html 에 있으니 dev_dir=SITE_DIR/public_html 로 기록할지 구현 시 확정 — Plan B GitInspector 와 정합).
 
 ## 5. 실패 처리
 
