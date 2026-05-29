@@ -89,7 +89,9 @@ final class ProjectStatusApiTest extends TestCase
         $this->assertArrayHasKey('sites', $r);
         $this->assertArrayHasKey('dev', $r['sites']);
         $this->assertArrayHasKey('prod', $r['sites']);
-        $this->assertArrayHasKey('log', $r);
+        // No deploy_log_path set on the fixture → log section reports 미설정.
+        $this->assertFalse($r['log']['ok'] ?? true);
+        $this->assertSame('미설정', $r['log']['error'] ?? null);
     }
 
     public function testUnknownProjectReturns404Shape(): void

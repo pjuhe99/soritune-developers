@@ -22,6 +22,11 @@ final class SiteCheck
             CURLOPT_CONNECTTIMEOUT => $timeout,
             CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_RETURNTRANSFER => true,
+            // SSRF hardening: only HTTPS. A subdomain value that is actually a
+            // numeric IP (e.g. 169.254.169.254 — passes isValidSubdomain) cannot
+            // be redirected to file:// etc.; combined with the hardcoded https://
+            // prefix this limits the call to plain HTTPS GET/HEAD only.
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
         ]);
         curl_exec($ch);
         $errno = curl_errno($ch);
